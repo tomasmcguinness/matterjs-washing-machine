@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Washing Machine Simulator</title>
+    <link rel="stylesheet" href="/vendor/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/style.css">
+    <style>
+        #drum { transform-box: view-box; transform-origin: 160px 236px; }
+        .running.phase-fill #drum { animation: spin 6s linear infinite; }
+        .running.phase-heat #drum { animation: spin 5s linear infinite; }
+        .running.phase-wash #drum { animation: spin 2.4s ease-in-out infinite alternate; }
+        .running.phase-rinse #drum { animation: spin-reverse 3s ease-in-out infinite alternate; }
+        .running.phase-spin #drum { animation: spin 0.25s linear infinite; }
+        .water { transition: transform 1.5s; transform-box: view-box; transform-origin: 160px 320px; transform: scaleY(0); }
+        .running.phase-fill .water { animation: fill 4s ease-out infinite; transform: scaleY(1); }
+        .running.phase-heat .water, .running.phase-wash .water, .running.phase-rinse .water { transform: scaleY(1); }
+        .wave { stroke-dasharray: 6 4; animation: dash 1s linear infinite; }
+        @keyframes fill { from { transform: scaleY(0.2); } to { transform: scaleY(1); } }
+        .heat-glyph, .spin-glyph { display: none; }
+        .running.phase-heat .heat-glyph { display: inline; }
+        .running.phase-spin .spin-glyph { display: inline; }
+        .led { animation: blink 1s steps(1) infinite; }
+    </style>
+</head>
+<body>
+<nav class="navbar bg-white mb-3">
+    <div class="container">
+        <span class="navbar-brand fw-bold text-uppercase">Washing Machine Simulator</span>
+        <span id="stateBadge" class="state-badge">Idle</span>
+    </div>
+</nav>
+
+<main class="container pb-5">
+    <ul class="nav nav-tabs mb-4" role="tablist">
+        <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#main" type="button" role="tab">Main</button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#settings" type="button" role="tab">Settings</button></li>
+    </ul>
+
+    <div class="tab-content">
+        <section class="tab-pane fade show active" id="main" role="tabpanel">
+            <div class="row g-4">
+                <div class="col-lg-6">
+                    <div class="card drawing h-100">
+                        <div class="card-body" id="device">
+                            <svg viewBox="0 0 320 400" role="img" aria-label="Washing machine">
+                                <defs>
+                                    <clipPath id="windowClip"><polygon points="246.3,253.2 233.2,284.9 208.9,309.2 177.2,322.3 142.8,322.3 111.1,309.2 86.8,284.9 73.7,253.2 73.7,218.8 86.8,187.1 111.1,162.8 142.8,149.7 177.2,149.7 208.9,162.8 233.2,187.1 246.3,218.8"/></clipPath>
+                                </defs>
+                                <!-- Cabinet and control panel -->
+                                <rect class="paper" x="20" y="16" width="280" height="368"/>
+                                <line class="line" x1="20" y1="76" x2="300" y2="76"/>
+                                <rect class="line thin" x="32" y="28" width="72" height="34"/>
+                                <line class="line thin" x1="52" y1="54" x2="84" y2="54"/>
+                                <polygon class="line thin" points="164.8,52.1 156.1,60.8 143.9,60.8 135.2,52.1 135.2,39.9 143.9,31.2 156.1,31.2 164.8,39.9"/>
+                                <line class="line thin" x1="150" y1="46" x2="150" y2="33"/>
+                                <rect class="line thin" x="196" y="32" width="90" height="26"/>
+                                <text id="display" class="label" x="241" y="50" text-anchor="middle">--:--</text>
+                                <rect class="solid only-running led anim" x="176" y="42" width="8" height="8"/>
+                                <!-- Door ring and window -->
+                                <polygon class="line thick" points="269.8,257.9 253.1,298.2 222.2,329.1 181.9,345.8 138.1,345.8 97.8,329.1 66.9,298.2 50.2,257.9 50.2,214.1 66.9,173.8 97.8,142.9 138.1,126.2 181.9,126.2 222.2,142.9 253.1,173.8 269.8,214.1"/>
+                                <rect class="line" x="262" y="222" width="14" height="28"/>
+                                <polygon class="line" points="246.3,253.2 233.2,284.9 208.9,309.2 177.2,322.3 142.8,322.3 111.1,309.2 86.8,284.9 73.7,253.2 73.7,218.8 86.8,187.1 111.1,162.8 142.8,149.7 177.2,149.7 208.9,162.8 233.2,187.1 246.3,218.8"/>
+                                <g clip-path="url(#windowClip)">
+                                    <!-- Water level -->
+                                    <g class="water">
+                                        <polyline class="line thin wave anim" points="70,270 90,264 110,270 130,264 150,270 170,264 190,270 210,264 230,270 250,264"/>
+                                        <line class="line thin" x1="70" y1="290" x2="250" y2="290" stroke-dasharray="2 6"/>
+                                    </g>
+                                    <!-- Drum with paddles and laundry -->
+                                    <g id="drum" class="anim">
+                                        <polygon class="line thin" points="236.5,251.2 224.9,279.3 203.3,300.9 175.2,312.5 144.8,312.5 116.7,300.9 95.1,279.3 83.5,251.2 83.5,220.8 95.1,192.7 116.7,171.1 144.8,159.5 175.2,159.5 203.3,171.1 224.9,192.7 236.5,220.8"/>
+                                        <polygon class="paper" points="150.7,158.6 160.0,176.0 169.3,158.6"/>
+                                        <polygon class="paper" points="231.7,266.6 212.0,266.0 222.4,282.8"/>
+                                        <polygon class="paper" points="97.6,282.8 108.0,266.0 88.3,266.6"/>
+                                        <polyline class="line thin" points="120,280 132,262 150,270 164,256 178,272 196,266 202,286"/>
+                                        <polyline class="line thin" points="128,296 146,284 168,292 186,282"/>
+                                        <polyline class="line thin" points="110,232 124,218 136,228"/>
+                                        <line class="line thin" x1="160" y1="230" x2="160" y2="242"/>
+                                        <line class="line thin" x1="154" y1="236" x2="166" y2="236"/>
+                                    </g>
+                                </g>
+                                <!-- Heating element glyph and spin marks -->
+                                <polyline class="line heat-glyph" points="120,364 128,356 136,364 144,356 152,364 160,356 168,364 176,356 184,364 192,356 200,364"/>
+                                <g class="spin-glyph">
+                                    <polyline class="line thin" points="40,130 30,140 40,150"/>
+                                    <polyline class="line thin" points="280,130 290,140 280,150"/>
+                                </g>
+                                <!-- Plinth -->
+                                <line class="line" x1="20" y1="374" x2="300" y2="374"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="card mb-4">
+                        <div class="card-header">Program</div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-sm-7">
+                                    <label class="form-label" for="program">Program</label>
+                                    <select id="program" class="form-select"></select>
+                                </div>
+                                <div class="col-sm-5">
+                                    <label class="form-label" for="finishBy">Finish by</label>
+                                    <input id="finishBy" type="datetime-local" class="form-control">
+                                    <div class="form-text">Latest end offered to the energy manager. Defaults to 12 h.</div>
+                                </div>
+                                <div class="col-sm-4">
+                                    <label class="form-label" for="temperature">Temperature</label>
+                                    <select id="temperature" class="form-select"></select>
+                                </div>
+                                <div class="col-sm-4">
+                                    <label class="form-label" for="spin">Spin</label>
+                                    <select id="spin" class="form-select"></select>
+                                </div>
+                                <div class="col-sm-4">
+                                    <label class="form-label" for="rinses">Rinses</label>
+                                    <select id="rinses" class="form-select"></select>
+                                </div>
+                                <div class="col-12">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" role="switch" id="optIn">
+                                        <label class="form-check-label" for="optIn">Allow energy manager to move the start time</label>
+                                    </div>
+                                </div>
+                                <div class="col-12 d-flex flex-wrap gap-2">
+                                    <button id="start" class="btn btn-dark">Start</button>
+                                    <button id="pause" class="btn btn-outline-dark">Pause</button>
+                                    <button id="resume" class="btn btn-outline-dark">Resume</button>
+                                    <button id="stop" class="btn btn-outline-dark">Stop</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">Status</div>
+                        <div class="card-body">
+                            <div class="row g-3 readout">
+                                <div class="col-6 col-md-4"><div class="meta-label">State</div><div id="runState" class="meta-value">–</div></div>
+                                <div class="col-6 col-md-4"><div class="meta-label">Phase</div><div id="phase" class="meta-value">–</div></div>
+                                <div class="col-6 col-md-4"><div class="meta-label">Remaining</div><div id="countdown" class="meta-value">–</div></div>
+                                <div class="col-6 col-md-4"><div class="meta-label">Starts</div><div id="startsAt" class="meta-value">–</div></div>
+                                <div class="col-6 col-md-4"><div class="meta-label">Power</div><div id="power" class="meta-value">–</div></div>
+                                <div class="col-6 col-md-4"><div class="meta-label">Energy total</div><div id="energy" class="meta-value">–</div></div>
+                                <div class="col-6 col-md-4"><div class="meta-label">Opt-out state</div><div id="optOutState" class="meta-value">–</div></div>
+                                <div class="col-12 col-md-8"><div class="meta-label">Last event</div><div id="message" class="meta-value">–</div></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">DEM forecast</div>
+                        <div class="card-body">
+                            <div id="forecastChart"></div>
+                            <div id="forecastMeta" class="row g-3 mt-1 readout"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="tab-pane fade" id="settings" role="tabpanel"></section>
+    </div>
+</main>
+<div id="toasts"></div>
+
+<script src="/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script type="module" src="/app.js"></script>
+</body>
+</html>
